@@ -6,12 +6,15 @@ from datetime import datetime
 import streamlit as st
 
 from lessons.content import DIFFICULTY_LEVELS, LESSONS
+from lessons_rag import RAGLessonGenerator
 from utils.progress import (
     complete_lesson,
     export_progress_report,
     get_completion_percentage,
     get_lesson_status,
     get_user_progress,
+    mark_topic_learned,
+    save_generated_lesson,
     touch_user_session,
 )
 
@@ -22,6 +25,12 @@ st.set_page_config(page_title="Python Tutor App", page_icon="🐍", layout="wide
 def get_current_username() -> str:
     username = st.session_state.get("username", "").strip()
     return username or "guest"
+
+
+def get_rag_generator() -> RAGLessonGenerator:
+    if "rag_generator" not in st.session_state:
+        st.session_state["rag_generator"] = RAGLessonGenerator()
+    return st.session_state["rag_generator"]
 
 
 def render_level_indicator(current_level: str) -> None:
@@ -68,6 +77,7 @@ def render_stats(username: str, progress: dict) -> None:
     col3.metric("Completed", completed_lessons)
     col4.metric("Time spent", f"{time_spent_minutes} min")
     st.progress(completion / 100, text=f"Course completion: {completion}%")
+    st.caption(f"Topics learned with RAG: {len(progress.get('learned_topics', []))}")
 
 
 def render_lesson_list(search: str, progress: dict) -> int:
@@ -88,7 +98,7 @@ def render_lesson_list(search: str, progress: dict) -> int:
         return 0
 
     unlocked_count = max(1, len(progress["completed_lessons"]) + 1)
-    for index, lesson in enumerate(filtered_lessons):
+    for lesson in filtered_lessons:
         original_index = LESSONS.index(lesson)
         is_unlocked = original_index < unlocked_count
         is_completed = lesson["id"] in progress["completed_lessons"]
@@ -144,6 +154,88 @@ def render_selected_lesson(progress: dict) -> None:
         st.info(status)
 
 
+def render_rag_generator(progress: dict) -> None:
+    st.subheader("Generate Custom Lesson (RAG)")
+    topic_query = st.text_input("Enter a Python topic", key="rag-topic", placeholder="e.g., lists, exceptions, classes")
+
+    if st.button("Generate lesson from official docs", use_container_width=True):
+        if not topic_query.strip():
+            st.warning("Please enter a topic first.")
+        else:
+            generator = get_rag_generator()
+            difficulty = st.session_state.get("difficulty", "Beginner")
+            lesson = generator.generate_lesson(topic_query.strip(), difficulty)
+            st.session_state["generated_rag_lesson"] = lesson
+
+    lesson = st.session_state.get("generated_rag_lesson")
+    if not lesson:
+        st.caption("RAG uses https://docs.python.org/3/tutorial/index.html as the source.")
+        return
+
+    st.success(lesson.summary)
+    st.write(lesson.explanation)
+
+    st.write("**Examples from tutorial context**")
+    for index, example in enumerate(lesson.code_examples, start=1):
+        st.code(example, language="python")
+        st.caption(f"Example {index}")
+
+    st.write("**Official documentation sources**")
+    for source in lesson.sources:
+        st.markdown(f"- [{source['title']}]({source['url']})")
+
+    st.write("**Related lessons**")
+    if lesson.related_lessons:
+        for related in lesson.related_lessons:
+            st.markdown(f"- {related['title']} ([open]({related['source']}))")
+    else:
+        st.caption("No related chapters found for this topic.")
+
+    st.write("**Quick quiz**")
+    for question in lesson.quiz:
+        st.markdown(f"- **Q:** {question['question']}  ")
+        st.caption(f"Hint: {question['answer_hint']}")
+
+    action_col1, action_col2 = st.columns(2)
+    with action_col1:
+        if st.button("Save generated lesson", key="save-rag-lesson", use_container_width=True):
+            username = get_current_username()
+            save_generated_lesson(
+                username,
+                {
+                    "topic": lesson.topic,
+                    "difficulty": lesson.difficulty,
+                    "summary": lesson.summary,
+                    "sources": lesson.sources,
+                    "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                },
+            )
+            st.success("Generated lesson saved to progress.")
+            st.rerun()
+    with action_col2:
+        if st.button("Mark topic learned", key="mark-rag-topic", use_container_width=True):
+            username = get_current_username()
+            mark_topic_learned(username, lesson.topic)
+            st.success(f"Marked '{lesson.topic}' as learned.")
+            st.rerun()
+
+    st.divider()
+    st.write("**Search lesson database by similarity**")
+    similarity_query = st.text_input("Search Python docs", key="rag-search", placeholder="e.g., for loops with break")
+    if similarity_query.strip():
+        search_results = get_rag_generator().search_topics(similarity_query.strip(), limit=5)
+        for result in search_results:
+            st.markdown(
+                f"- **{result['title']}** (distance: {result['score']})  \n"
+                f"  {result['preview']}  \n"
+                f"  [Official source]({result['source']})"
+            )
+
+    saved_topics = [item.get("topic") for item in progress.get("generated_lessons", []) if item.get("topic")]
+    if saved_topics:
+        st.caption("Saved custom lessons: " + ", ".join(saved_topics[-8:]))
+
+
 def render_export(username: str, progress: dict) -> None:
     report = export_progress_report(username, progress, LESSONS)
     st.download_button(
@@ -163,7 +255,7 @@ def main() -> None:
 
     st.title("Learn Python at Your Pace")
     st.write(
-        "Study one lesson at a time, switch code difficulty instantly, and keep your progress saved."
+        "Study one lesson at a time, switch code difficulty instantly, and generate custom lessons from official Python docs."
     )
     render_stats(username, progress)
 
@@ -172,6 +264,8 @@ def main() -> None:
         render_lesson_list(search, progress)
     with right_col:
         render_selected_lesson(progress)
+        st.divider()
+        render_rag_generator(progress)
         st.divider()
         render_export(username, progress)
         st.caption(f"Session updated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

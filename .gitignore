@@ -4,3 +4,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# RAG runtime artifacts
+data/embeddings/python_docs/

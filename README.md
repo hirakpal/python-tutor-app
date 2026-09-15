@@ -1,32 +1,31 @@
 # Python Tutor App
 
-A Streamlit-based Python tutor application that teaches core Python topics from **Beginner** to **God** level with matching code examples, explanations, and persistent progress tracking.
+A Streamlit-based Python tutor application that teaches core Python topics from **Beginner** to **God** level with matching code examples, explanations, progress tracking, and RAG-powered custom lesson generation from official Python docs.
 
 ## Features
 
-- Streamlit dashboard with a clean two-column learning layout
-- Difficulty toggle with 4 levels: Beginner, Average, Expert, God
-- Five starter lessons:
-  - Python Basics
-  - String Operations
-  - Lists and Collections
-  - Functions
-  - Conditionals and Loops
-- Sequential lesson unlocking
-- Session-based learner profiles
-- Persistent JSON progress storage
-- Completion percentage, completed lesson count, and time spent stats
-- Search/filter lessons
-- Syntax-highlighted code viewer
-- Exportable JSON progress report
+- Streamlit dashboard with difficulty toggle (Beginner, Average, Expert, God)
+- Starter lessons with progress tracking and JSON export
+- **RAG custom lesson generator** backed by Python tutorial docs: https://docs.python.org/3/tutorial/index.html
+- Retrieval coverage for Python tutorial chapters 1-9 (interpreter, basics, control flow, data structures, modules, I/O, exceptions, classes, stdlib)
+- Similarity search across documentation chunks
+- Related topic suggestions and quiz prompts for generated lessons
+- Generated lesson/topic progress persistence in `data/user_progress.json`
 
 ## Project Structure
 
 ```text
 python-tutor-app/
 ├── app.py
+├── document_loader.py
+├── embeddings.py
+├── rag_system.py
+├── lessons_rag.py
 ├── data/
-│   └── user_progress.json
+│   ├── user_progress.json
+│   ├── python_docs/
+│   │   └── tutorial_cache.json
+│   └── embeddings/
 ├── lessons/
 │   ├── __init__.py
 │   └── content.py
@@ -34,7 +33,7 @@ python-tutor-app/
 │   ├── __init__.py
 │   └── progress.py
 ├── requirements.txt
-├── .gitignore
+├── RAG_README.md
 └── README.md
 ```
 
@@ -47,11 +46,4 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Progress Tracking
-
-- Progress is stored in `data/user_progress.json`
-- Each profile keeps:
-  - completed lessons
-  - total time spent
-  - last active timestamp
-- Reuse the same profile name to resume learning later
+See `RAG_README.md` for architecture and RAG workflow details.
