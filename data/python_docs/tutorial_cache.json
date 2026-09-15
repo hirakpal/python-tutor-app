@@ -1,0 +1,11 @@
+{
+  "chapter-1": "Using the Python interpreter starts by running `python` from your terminal. Interactive mode executes code line by line. Example: >>> 2 + 2",
+  "chapter-2": "An informal introduction covers numbers and strings. Example: >>> price = 19.5; >>> message = 'Learning Python'",
+  "chapter-3": "Control flow includes if/elif/else, while, for, range(), break and continue. Example: >>> for number in range(5): ...",
+  "chapter-4": "Data structures include lists, tuples, sets and dictionaries. Example: >>> squares = [1, 4, 9]; >>> squares.append(16)",
+  "chapter-5": "Modules are imported with import statements and explored with dir(). The sys module provides interpreter context.",
+  "chapter-6": "Input/output includes print formatting, input(), and file handling with open().",
+  "chapter-7": "Errors and exceptions use try/except/else/finally and raise for explicit error signaling.",
+  "chapter-8": "Classes define objects with attributes and methods, and support inheritance.",
+  "chapter-9": "The standard library overview introduces built-in modules like pathlib, datetime and statistics."
+}

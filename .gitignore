@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.streamlit/
+data/user_profiles/*.json
+!data/user_profiles/.gitkeep
+data/user_progress.json
+
+# RAG runtime artifacts
+data/embeddings/python_docs/
