@@ -4,6 +4,8 @@ from utils.progress import (
     get_completion_percentage,
     get_lesson_status,
     get_user_progress,
+    mark_topic_learned,
+    save_generated_lesson,
     touch_user_session,
 )
 
@@ -13,5 +15,7 @@ __all__ = [
     "get_completion_percentage",
     "get_lesson_status",
     "get_user_progress",
+    "mark_topic_learned",
+    "save_generated_lesson",
     "touch_user_session",
 ]
