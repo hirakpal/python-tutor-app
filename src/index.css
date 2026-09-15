@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #f1f5f9;
+  background: #0f172a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 28%),
+    linear-gradient(180deg, #0f172a 0%, #111c33 100%);
+  color: #f1f5f9;
+}
+
+button,
+a {
+  transition: all 0.2s ease;
+}
+
+pre,
+code,
+textarea {
+  font-family: 'Fira Code', 'SFMono-Regular', Consolas, monospace;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.prism-code .token.comment,
+.prism-code .token.prolog,
+.prism-code .token.doctype,
+.prism-code .token.cdata {
+  color: #94a3b8;
+}
+
+.prism-code .token.punctuation {
+  color: #cbd5e1;
+}
+
+.prism-code .token.property,
+.prism-code .token.tag,
+.prism-code .token.constant,
+.prism-code .token.symbol,
+.prism-code .token.deleted {
+  color: #fda4af;
+}
+
+.prism-code .token.boolean,
+.prism-code .token.number {
+  color: #fbbf24;
+}
+
+.prism-code .token.selector,
+.prism-code .token.attr-name,
+.prism-code .token.string,
+.prism-code .token.char,
+.prism-code .token.builtin,
+.prism-code .token.inserted {
+  color: #86efac;
+}
+
+.prism-code .token.operator,
+.prism-code .token.entity,
+.prism-code .token.url,
+.prism-code .language-css .token.string,
+.prism-code .style .token.string {
+  color: #93c5fd;
+}
+
+.prism-code .token.atrule,
+.prism-code .token.attr-value,
+.prism-code .token.keyword {
+  color: #c4b5fd;
+}
+
+.prism-code .token.function,
+.prism-code .token.class-name {
+  color: #67e8f9;
+}
+
+.prism-code .token.regex,
+.prism-code .token.important,
+.prism-code .token.variable {
+  color: #fdba74;
+}
