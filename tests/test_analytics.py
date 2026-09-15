@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from unittest.mock import patch
 
 from modules.chapters import get_chapters
 from utils.analytics import completion_stats, current_streak, module_snapshots, overall_progress
@@ -21,19 +22,31 @@ class AnalyticsTests(unittest.TestCase):
         self.assertGreater(overall_progress(self.profile, self.modules), 0)
 
     def test_current_streak_counts_consecutive_days(self) -> None:
-        today = date.today()
+        today = date(2026, 9, 15)
         self.profile["daily_activity"] = {
             (today - timedelta(days=2)).isoformat(): {"lessons_completed": 1, "seconds": 60},
             (today - timedelta(days=1)).isoformat(): {"lessons_completed": 1, "seconds": 60},
             today.isoformat(): {"lessons_completed": 1, "seconds": 60},
         }
-        self.assertEqual(current_streak(self.profile), 3)
+        fake_now = datetime(2026, 9, 15, 12, 0, tzinfo=timezone.utc)
+        with patch("utils.analytics.datetime") as mocked_datetime:
+            mocked_datetime.now.return_value = fake_now
+            mocked_datetime.fromisoformat.side_effect = datetime.fromisoformat
+            self.assertEqual(current_streak(self.profile), 3)
 
     def test_completion_stats_and_snapshots_match_module_count(self) -> None:
         stats = completion_stats(self.profile, self.modules)
         snapshots = module_snapshots(self.profile, self.modules)
         self.assertEqual(stats["total_modules"], 11)
         self.assertEqual(len(snapshots), 11)
+
+    def test_current_streak_uses_utc_today(self) -> None:
+        self.profile["daily_activity"] = {"2026-09-15": {"lessons_completed": 1, "seconds": 60}}
+        fake_now = datetime(2026, 9, 15, 0, 30, tzinfo=timezone.utc)
+        with patch("utils.analytics.datetime") as mocked_datetime:
+            mocked_datetime.now.return_value = fake_now
+            mocked_datetime.fromisoformat.side_effect = datetime.fromisoformat
+            self.assertEqual(current_streak(self.profile), 1)
 
 
 if __name__ == "__main__":

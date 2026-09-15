@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from textwrap import indent
 
@@ -491,6 +492,7 @@ CHAPTER_BLUEPRINTS = [
 
 def _difficulty_content(title: str, summary: str, objectives: list[str], code: str, related_topics: list[str]) -> dict[str, dict[str, str]]:
     wrapped_code = indent(code, "    ")
+    identifier = re.sub(r"_+", "_", re.sub(r"[^a-z0-9_]+", "_", title.lower())).strip("_")
     return {
         "Beginner": {
             "explanation": f"Start with the core idea: {summary} Focus first on {objectives[0].lower()}. Read the example top to bottom and confirm what each line prints or changes.",
@@ -506,7 +508,7 @@ def _difficulty_content(title: str, summary: str, objectives: list[str], code: s
         },
         "God": {
             "explanation": f"Treat this topic as a reusable mental model. Beyond the syntax, reason about trade-offs, failure modes, and composition with adjacent concepts like {', '.join(related_topics)}.",
-            "code": f"def audit_{title.lower().replace(' ', '_').replace(',', '').replace('/', '_').replace('__', '_')}():\n{wrapped_code}\n    return 'Reflect on trade-offs and edge cases.'\n\nprint(audit_{title.lower().replace(' ', '_').replace(',', '').replace('/', '_').replace('__', '_')}())",
+            "code": f"def audit_{identifier}():\n{wrapped_code}\n    return 'Reflect on trade-offs and edge cases.'\n\nprint(audit_{identifier}())",
         },
     }
 

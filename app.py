@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import streamlit as st
 
 from modules.chapters import DIFFICULTIES, get_chapters
+from modules.module_manager import module_by_id
 from pages.analytics import render_analytics_page
 from pages.home import render_home_page
 from pages.lesson_view import render_lesson_view
@@ -12,12 +15,27 @@ from utils.progress import (
     available_profiles,
     create_or_load_profile,
     export_profile_json,
+    record_lesson_time,
     reset_profile,
     restore_profile_backup,
     save_profile,
     update_profile_difficulty,
 )
 from utils.session import initialize_session, navigate_to_analytics, navigate_to_home
+
+
+def _persist_active_lesson_time(profile: dict, modules: list[dict]) -> None:
+    if st.session_state.route != "lesson" or not st.session_state.lesson_started_at:
+        return
+    if not st.session_state.selected_module_id or not st.session_state.selected_lesson_id:
+        return
+    module = module_by_id(modules, st.session_state.selected_module_id)
+    if not module:
+        return
+    started_at = datetime.fromisoformat(st.session_state.lesson_started_at)
+    elapsed_seconds = max(int((datetime.now(timezone.utc) - started_at).total_seconds()), 0)
+    record_lesson_time(profile, module, st.session_state.selected_lesson_id, elapsed_seconds)
+    st.session_state.lesson_started_at = None
 
 
 def render_profile_sidebar(profile: dict, modules: list[dict]) -> dict:
@@ -32,12 +50,16 @@ def render_profile_sidebar(profile: dict, modules: list[dict]) -> dict:
         index=profiles.index(profile["username"]),
     )
     if selected_profile != st.session_state.active_profile:
+        _persist_active_lesson_time(profile, modules)
         st.session_state.active_profile = selected_profile
+        navigate_to_home()
         st.rerun()
 
     new_profile_name = st.sidebar.text_input("Create or open profile", placeholder="Learner name")
     if st.sidebar.button("Save / Load profile", use_container_width=True) and new_profile_name.strip():
+        _persist_active_lesson_time(profile, modules)
         st.session_state.active_profile = new_profile_name.strip()
+        navigate_to_home()
         st.rerun()
 
     st.sidebar.caption("Progress is automatically saved to JSON files in `data/user_profiles/`.")
@@ -53,11 +75,17 @@ def render_profile_sidebar(profile: dict, modules: list[dict]) -> dict:
     )
     restore_file = st.sidebar.file_uploader("Restore profile backup", type=["json"])
     if restore_file is not None and st.sidebar.button("Restore uploaded backup", use_container_width=True):
-        with st.spinner("Restoring profile backup..."):
-            restored = restore_profile_backup(restore_file.getvalue(), modules)
-        st.session_state.active_profile = restored["username"]
-        st.toast("Backup restored successfully")
-        st.rerun()
+        try:
+            with st.spinner("Restoring profile backup..."):
+                restored = restore_profile_backup(restore_file.getvalue(), modules)
+        except ValueError:
+            st.error("Invalid backup file.")
+        else:
+            _persist_active_lesson_time(profile, modules)
+            st.session_state.active_profile = restored["username"]
+            navigate_to_home()
+            st.toast("Backup restored successfully")
+            st.rerun()
 
     st.sidebar.divider()
     st.sidebar.subheader("Danger zone")
@@ -71,7 +99,7 @@ def render_profile_sidebar(profile: dict, modules: list[dict]) -> dict:
     return profile
 
 
-def render_top_bar(profile: dict) -> dict:
+def render_top_bar(profile: dict, modules: list[dict]) -> dict:
     left, middle, right = st.columns([1.4, 2.6, 1.2])
     with left:
         st.markdown("## 🎓 Python Tutor App")
@@ -90,9 +118,11 @@ def render_top_bar(profile: dict) -> dict:
     with right:
         st.write("")
         if st.button("🏠 Home", use_container_width=True):
+            _persist_active_lesson_time(profile, modules)
             navigate_to_home()
             st.rerun()
         if st.button("📊 Analytics", use_container_width=True):
+            _persist_active_lesson_time(profile, modules)
             navigate_to_analytics()
             st.rerun()
     return profile
@@ -109,7 +139,7 @@ def main() -> None:
     st.session_state.current_difficulty = profile["last_difficulty"]
 
     render_profile_sidebar(profile, modules)
-    render_top_bar(profile)
+    render_top_bar(profile, modules)
 
     route = st.session_state.route
     if route == "module" and st.session_state.selected_module_id:

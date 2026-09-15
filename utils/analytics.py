@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def module_snapshots(profile: dict, modules: list[dict]) -> list[dict]:
@@ -46,7 +46,7 @@ def current_streak(profile: dict) -> int:
     activity_days = {datetime.fromisoformat(day).date() for day, stats in profile.get("daily_activity", {}).items() if stats.get("lessons_completed", 0) > 0}
     if not activity_days:
         return 0
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
     if today not in activity_days and (today - timedelta(days=1)) not in activity_days:
         return 0
     streak = 0

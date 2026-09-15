@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,7 +25,8 @@ def ensure_data_dirs() -> None:
 
 
 def safe_profile_name(username: str) -> str:
-    cleaned = "_".join(username.strip().lower().split())
+    cleaned = re.sub(r"[^a-z0-9_-]+", "_", username.strip().lower())
+    cleaned = cleaned.strip("._-")
     return cleaned or "guest"
 
 
@@ -180,21 +182,12 @@ def mark_lesson_complete(
         state["completed_lessons"].sort(key=lambda lesson_id: next(item["number"] for item in module["lessons"] if item["id"] == lesson_id))
         state["completion_times"][lesson["id"]] = utc_now()
 
-    state["time_spent_seconds"] += max(elapsed_seconds, 0)
-    state["current_lesson_id"] = lesson["id"]
-    state["last_difficulty"] = difficulty
-    state["last_accessed_at"] = utc_now()
-    profile["last_module_id"] = module["id"]
-    profile["last_lesson_id"] = lesson["id"]
-    profile["last_accessed_at"] = utc_now()
-    profile["last_difficulty"] = difficulty
+    timestamp = _record_lesson_time(profile, module, lesson["id"], elapsed_seconds, difficulty)
     profile["difficulty_usage"][difficulty] = profile["difficulty_usage"].get(difficulty, 0) + 1
-
-    day_key = profile["last_accessed_at"][:10]
+    day_key = timestamp[:10]
     day_state = profile["daily_activity"].setdefault(day_key, {"lessons_completed": 0, "seconds": 0})
     if not completed_before:
         day_state["lessons_completed"] += 1
-    day_state["seconds"] += max(elapsed_seconds, 0)
 
     profile["session_history"].append(_session_event("lesson_complete", module["id"], lesson["id"], difficulty))
     profile["session_history"] = profile["session_history"][-200:]
@@ -206,11 +199,44 @@ def mark_lesson_complete(
         current_index = 0
     if current_index < len(lesson_ids) - 1:
         state["current_lesson_id"] = lesson_ids[current_index + 1]
+    profile["last_lesson_id"] = state["current_lesson_id"]
 
     refreshed = _refresh_module_progress(profile, module)
     module_completed = refreshed["status"] == "Completed"
     save_profile(profile)
     return (not completed_before), module_completed
+
+
+def _record_lesson_time(
+    profile: dict[str, Any],
+    module: dict,
+    lesson_id: str,
+    elapsed_seconds: int,
+    difficulty: str | None = None,
+) -> str:
+    timestamp = utc_now()
+    elapsed = max(elapsed_seconds, 0)
+    state = profile["modules"][module["id"]]
+    state["time_spent_seconds"] += elapsed
+    state["current_lesson_id"] = lesson_id
+    state["last_accessed_at"] = timestamp
+    if difficulty is not None:
+        state["last_difficulty"] = difficulty
+        profile["last_difficulty"] = difficulty
+    profile["last_module_id"] = module["id"]
+    profile["last_lesson_id"] = lesson_id
+    profile["last_accessed_at"] = timestamp
+    day_key = timestamp[:10]
+    day_state = profile["daily_activity"].setdefault(day_key, {"lessons_completed": 0, "seconds": 0})
+    day_state["seconds"] += elapsed
+    return timestamp
+
+
+def record_lesson_time(profile: dict[str, Any], module: dict, lesson_id: str, elapsed_seconds: int) -> None:
+    if elapsed_seconds <= 0:
+        return
+    _record_lesson_time(profile, module, lesson_id, elapsed_seconds)
+    save_profile(profile)
 
 
 def reset_profile(profile: dict[str, Any], modules: list[dict]) -> dict[str, Any]:
@@ -223,7 +249,14 @@ def reset_profile(profile: dict[str, Any], modules: list[dict]) -> dict[str, Any
 
 
 def restore_profile_backup(payload: bytes, modules: list[dict]) -> dict[str, Any]:
-    restored = json.loads(payload.decode("utf-8"))
+    try:
+        restored = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("Invalid backup file.") from exc
+    if not isinstance(restored, dict) or not isinstance(restored.get("username"), str):
+        raise ValueError("Invalid backup file.")
+    if "modules" in restored and not isinstance(restored["modules"], dict):
+        raise ValueError("Invalid backup file.")
     normalized = _normalize_profile(restored, modules)
     save_profile(normalized)
     return normalized

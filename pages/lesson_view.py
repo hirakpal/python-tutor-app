@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import streamlit as st
 
 from modules.module_manager import lesson_by_id, module_by_id, neighboring_lessons
-from utils.progress import mark_lesson_complete, record_lesson_view, update_profile_difficulty
+from utils.progress import mark_lesson_complete, record_lesson_time, record_lesson_view, update_profile_difficulty
 from utils.session import navigate_to_home, navigate_to_lesson, navigate_to_module
 
 
@@ -70,6 +70,7 @@ def render_lesson_view(profile: dict, modules: list[dict]) -> None:
 
     action_columns = st.columns(4)
     if action_columns[0].button("⬅️ Back to module", use_container_width=True):
+        record_lesson_time(profile, module, lesson["id"], elapsed_seconds)
         navigate_to_module(module["id"])
         st.rerun()
     if action_columns[1].button("✅ Mark as complete", use_container_width=True):
@@ -81,8 +82,10 @@ def render_lesson_view(profile: dict, modules: list[dict]) -> None:
             st.toast(f"Module completed: {module['title']} 🎉")
         st.rerun()
     if action_columns[2].button("Previous lesson", use_container_width=True, disabled=previous_lesson is None):
+        record_lesson_time(profile, module, lesson["id"], elapsed_seconds)
         navigate_to_lesson(module["id"], previous_lesson["id"])
         st.rerun()
     if action_columns[3].button("Next lesson", use_container_width=True, disabled=next_lesson is None):
+        record_lesson_time(profile, module, lesson["id"], elapsed_seconds)
         navigate_to_lesson(module["id"], next_lesson["id"])
         st.rerun()

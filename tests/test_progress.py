@@ -39,6 +39,7 @@ class ProgressTests(unittest.TestCase):
         self.assertIn(lesson["id"], state["completed_lessons"])
         self.assertGreater(state["progress_percent"], 0)
         self.assertEqual(profile["difficulty_usage"]["Average"], 1)
+        self.assertEqual(profile["last_lesson_id"], module["lessons"][1]["id"])
 
     def test_restore_backup_normalizes_module_structure(self) -> None:
         profile = progress_module.create_or_load_profile("Alice", self.modules)
@@ -47,6 +48,24 @@ class ProgressTests(unittest.TestCase):
         self.assertEqual(restored["username"], "Alice")
         self.assertEqual(restored["modules"]["chapter_1"]["completed_lessons"], [self.modules[0]["lessons"][0]["id"]])
         self.assertIn("chapter_11", restored["modules"])
+
+    def test_record_lesson_time_updates_time_without_completion(self) -> None:
+        profile = progress_module.create_or_load_profile("Alice", self.modules)
+        module = self.modules[0]
+        lesson = module["lessons"][0]
+        progress_module.record_lesson_time(profile, module, lesson["id"], 90)
+        self.assertEqual(profile["modules"][module["id"]]["time_spent_seconds"], 90)
+        self.assertEqual(profile["last_lesson_id"], lesson["id"])
+        day_values = next(iter(profile["daily_activity"].values()))
+        self.assertEqual(day_values["lessons_completed"], 0)
+        self.assertEqual(day_values["seconds"], 90)
+
+    def test_restore_backup_rejects_invalid_payload(self) -> None:
+        with self.assertRaises(ValueError):
+            progress_module.restore_profile_backup(b"[]", self.modules)
+
+    def test_safe_profile_name_removes_path_characters(self) -> None:
+        self.assertEqual(progress_module.safe_profile_name("../outside /tmp/owned"), "outside_tmp_owned")
 
 
 if __name__ == "__main__":
