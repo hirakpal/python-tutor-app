@@ -1,6 +1,13 @@
 __pycache__/
 *.py[cod]
+.pytest_cache/
 .venv/
+venv/
 .streamlit/
+.DS_Store
 data/user_profiles/*.json
 !data/user_profiles/.gitkeep
+data/user_progress.json
+
+# RAG runtime artifacts
+data/embeddings/python_docs/

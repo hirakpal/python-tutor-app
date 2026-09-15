@@ -9,6 +9,7 @@ from typing import Any
 
 DATA_ROOT = Path(os.getenv("PYTHON_TUTOR_DATA_DIR", Path(__file__).resolve().parents[1] / "data"))
 PROFILE_DIR = DATA_ROOT / "user_profiles"
+PROGRESS_FILE = DATA_ROOT / "user_progress.json"
 
 
 def utc_now() -> str:
@@ -16,6 +17,7 @@ def utc_now() -> str:
 
 
 def ensure_data_dirs() -> None:
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
     PROFILE_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_ROOT / "modules").mkdir(parents=True, exist_ok=True)
     (DATA_ROOT / "embeddings").mkdir(parents=True, exist_ok=True)
@@ -274,3 +276,133 @@ def export_profile_pdf(profile: dict[str, Any], modules: list[dict]) -> bytes:
         pdf.extend(f"{offset:010d} 00000 n \n".encode("latin-1"))
     pdf.extend(f"trailer<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF".encode("latin-1"))
     return bytes(pdf)
+
+def _ensure_storage() -> None:
+    ensure_data_dirs()
+    if not PROGRESS_FILE.exists():
+        PROGRESS_FILE.write_text("{}", encoding="utf-8")
+
+
+def _read_all_progress() -> dict[str, Any]:
+    _ensure_storage()
+    return json.loads(PROGRESS_FILE.read_text(encoding="utf-8") or "{}")
+
+
+def _write_all_progress(progress_data: dict[str, Any]) -> None:
+    _ensure_storage()
+    PROGRESS_FILE.write_text(json.dumps(progress_data, indent=2), encoding="utf-8")
+
+
+def _default_progress() -> dict[str, Any]:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return {
+        "completed_lessons": [],
+        "time_spent_seconds": 0,
+        "last_active": now,
+        "last_seen_at": now,
+        "learned_topics": [],
+        "generated_lessons": [],
+    }
+
+
+def _normalize_progress(progress: dict[str, Any]) -> dict[str, Any]:
+    defaults = _default_progress()
+    normalized = {**defaults, **progress}
+    if not isinstance(normalized.get("learned_topics"), list):
+        normalized["learned_topics"] = []
+    if not isinstance(normalized.get("generated_lessons"), list):
+        normalized["generated_lessons"] = []
+    if not isinstance(normalized.get("completed_lessons"), list):
+        normalized["completed_lessons"] = []
+    return normalized
+
+
+def get_user_progress(username: str) -> dict[str, Any]:
+    progress_data = _read_all_progress()
+    if username not in progress_data:
+        progress_data[username] = _default_progress()
+    progress_data[username] = _normalize_progress(progress_data[username])
+    _write_all_progress(progress_data)
+    return progress_data[username]
+
+
+def touch_user_session(username: str) -> None:
+    progress_data = _read_all_progress()
+    progress = _normalize_progress(progress_data.get(username, _default_progress()))
+    now = datetime.now()
+    try:
+        last_seen = datetime.strptime(progress["last_seen_at"], "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        last_seen = now
+    elapsed = max(0, min(int((now - last_seen).total_seconds()), 300))
+    progress["time_spent_seconds"] += elapsed
+    progress["last_active"] = now.strftime("%Y-%m-%d %H:%M:%S")
+    progress["last_seen_at"] = progress["last_active"]
+    progress_data[username] = progress
+    _write_all_progress(progress_data)
+
+
+def complete_lesson(username: str, lesson_id: str) -> None:
+    progress_data = _read_all_progress()
+    progress = _normalize_progress(progress_data.get(username, _default_progress()))
+    if lesson_id not in progress["completed_lessons"]:
+        progress["completed_lessons"].append(lesson_id)
+    progress["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    progress_data[username] = progress
+    _write_all_progress(progress_data)
+
+
+def save_generated_lesson(username: str, lesson_payload: dict[str, Any]) -> None:
+    progress_data = _read_all_progress()
+    progress = _normalize_progress(progress_data.get(username, _default_progress()))
+    progress["generated_lessons"] = [
+        entry
+        for entry in progress["generated_lessons"]
+        if entry.get("topic", "").lower() != lesson_payload.get("topic", "").lower()
+    ]
+    progress["generated_lessons"].append(lesson_payload)
+    progress["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    progress_data[username] = progress
+    _write_all_progress(progress_data)
+
+
+def mark_topic_learned(username: str, topic: str) -> None:
+    progress_data = _read_all_progress()
+    progress = _normalize_progress(progress_data.get(username, _default_progress()))
+    normalized_topic = topic.strip().lower()
+    existing_topics = [item.lower() for item in progress["learned_topics"] if isinstance(item, str)]
+    if normalized_topic and normalized_topic not in existing_topics:
+        progress["learned_topics"].append(topic.strip())
+    progress["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    progress_data[username] = progress
+    _write_all_progress(progress_data)
+
+
+def get_completion_percentage(progress: dict[str, Any], total_lessons: int) -> int:
+    if total_lessons == 0:
+        return 0
+    return round((len(progress["completed_lessons"]) / total_lessons) * 100)
+
+
+def get_lesson_status(progress: dict[str, Any], lesson_id: str, lesson_index: int) -> str:
+    unlocked_count = max(1, len(progress["completed_lessons"]) + 1)
+    if lesson_id in progress["completed_lessons"]:
+        return "Completed"
+    if lesson_index < unlocked_count:
+        return "Ready to learn"
+    return "Locked until you complete the earlier lesson"
+
+
+def export_progress_report(username: str, progress: dict[str, Any], lessons: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "username": username,
+        "completed_lessons": progress["completed_lessons"],
+        "completion_percentage": get_completion_percentage(progress, len(lessons)),
+        "time_spent_minutes": int(progress["time_spent_seconds"] // 60),
+        "remaining_lessons": [
+            lesson["title"] for lesson in lessons if lesson["id"] not in progress["completed_lessons"]
+        ],
+        "learned_topics": progress.get("learned_topics", []),
+        "generated_lesson_topics": [entry.get("topic") for entry in progress.get("generated_lessons", [])],
+        "last_active": progress["last_active"],
+    }
