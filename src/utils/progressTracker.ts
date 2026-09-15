@@ -163,14 +163,15 @@ export const completeLesson = (progress: ProgressState, moduleId: string, lesson
     lastVisited: null,
     timeSpentMinutes: 0,
   }
-  if (!nextProgress.completedLessonIds.includes(lessonId)) {
+  const isFirstCompletion = !nextProgress.completedLessonIds.includes(lessonId)
+  if (isFirstCompletion) {
     nextProgress.completedLessonIds = [...nextProgress.completedLessonIds, lessonId]
     nextProgress.xp += 50
     nextProgress.dailyActivity[today] = { ...activity, lessons: activity.lessons + 1, xp: activity.xp + 50 }
-  }
-  if (accuracy >= 1) {
-    nextProgress.xp += 10
-    nextProgress.dailyActivity[today] = { ...nextProgress.dailyActivity[today], xp: nextProgress.dailyActivity[today].xp + 10 }
+    if (accuracy >= 1) {
+      nextProgress.xp += 10
+      nextProgress.dailyActivity[today] = { ...nextProgress.dailyActivity[today], xp: nextProgress.dailyActivity[today].xp + 10 }
+    }
   }
   nextProgress.lessonAttempts[lessonId] = {
     ...attempt,

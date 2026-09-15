@@ -29,19 +29,9 @@ interface CodeEditorProps {
 const loadPyodideRuntime = async () => {
   if (window.pyodide) return window.pyodide
   if (!window.loadPyodide) {
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script')
-      script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js'
-      script.async = true
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error('Unable to load Pyodide runtime.'))
-      document.body.append(script)
-    })
+    throw new Error('Pyodide loader is unavailable. Load a trusted local /pyodide/pyodide.js runtime before running code.')
   }
-  if (!window.loadPyodide) {
-    throw new Error('Pyodide loader is unavailable.')
-  }
-  window.pyodide = await window.loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' })
+  window.pyodide = await window.loadPyodide({ indexURL: '/pyodide/' })
   return window.pyodide
 }
 

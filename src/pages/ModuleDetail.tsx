@@ -1,16 +1,17 @@
 import { Link, useParams } from 'react-router-dom'
 import { DIFFICULTY_COLORS } from '../utils/constants'
-import { findNextLesson, getModuleProgress, moduleMap } from '../utils/curriculum'
-import type { Difficulty, ProgressState } from '../types'
+import { findNextLesson, getModuleProgress } from '../utils/curriculum'
+import type { Difficulty, Module, ProgressState } from '../types'
 
 interface ModuleDetailProps {
+  modules: Module[]
   progress: ProgressState
   preferredDifficulty: Difficulty
 }
 
-export default function ModuleDetail({ progress, preferredDifficulty }: ModuleDetailProps) {
+export default function ModuleDetail({ modules, progress, preferredDifficulty }: ModuleDetailProps) {
   const { moduleId } = useParams()
-  const moduleItem = moduleId ? moduleMap.get(moduleId) : null
+  const moduleItem = modules.find((moduleCandidate) => moduleCandidate.id === moduleId) ?? null
 
   if (!moduleItem) {
     return (

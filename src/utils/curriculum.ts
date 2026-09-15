@@ -1,7 +1,5 @@
 import type { Difficulty, Lesson, Module } from '../types'
 
-const difficultyCycle: Difficulty[] = ['Beginner', 'Average', 'Expert', 'God']
-
 const moduleBlueprints = [
   {
     chapter: 1,
@@ -122,56 +120,221 @@ const moduleBlueprints = [
   },
 ] as const
 
-const buildLesson = (moduleTitle: string, lessonTitle: string, moduleId: string, index: number): Lesson => {
-  const difficulty = difficultyCycle[index % difficultyCycle.length]
+interface LessonTemplate {
+  concept: string
+  exampleCode: string
+  starterCode: string
+  solutionCode: string
+  outputHint: string
+  explainMore: string
+  hints: [string, string, string]
+  validationKeywords: string[]
+}
+
+const buildLessonTemplate = (moduleTitle: string, lessonTitle: string, difficulty: Difficulty): LessonTemplate => {
+  const lessonLower = lessonTitle.toLowerCase()
+  const difficultyPrompt: Record<Difficulty, string> = {
+    Beginner: 'Start small and focus on one clear output line.',
+    Average: 'Add one small extension after the base solution works.',
+    Expert: 'Refactor names or flow for readability after solving.',
+    God: 'Challenge yourself to make the code concise and elegant.',
+  }
+
+  if (lessonLower.includes('file')) {
+    return {
+      concept: `${lessonTitle} in ${moduleTitle} shows how text streams can be read and written in sequence.`,
+      exampleCode: `from io import StringIO
+source = StringIO("python\\nacademy\\n")
+first = source.readline().strip()
+print(f"First line: {first}")`,
+      starterCode: `from io import StringIO
+source = StringIO("python\\nacademy\\n")
+# TODO: read one line and print it`,
+      solutionCode: `from io import StringIO
+source = StringIO("python\\nacademy\\n")
+first = source.readline().strip()
+print(f"Read line: {first}")`,
+      outputHint: 'Expect output that confirms one line was read from the stream.',
+      explainMore: `${difficultyPrompt[difficulty]} Reading APIs return text, then string cleanup like strip() prepares that text for display.`,
+      hints: [
+        'Use readline() on the stream object.',
+        'Store the result in a variable before printing.',
+        'Clean trailing newline characters with strip().',
+      ],
+      validationKeywords: ['readline', 'print'],
+    }
+  }
+
+  if (lessonLower.includes('exception') || lessonLower.includes('traceback') || lessonLower.includes('finally')) {
+    return {
+      concept: `${lessonTitle} in ${moduleTitle} introduces safe execution paths with try/except handling.`,
+      exampleCode: `value = "42"
+try:
+    result = int(value)
+    print(f"Converted: {result}")
+except ValueError:
+    print("Conversion failed")`,
+      starterCode: `value = "42"
+# TODO: wrap conversion in try/except
+print(value)`,
+      solutionCode: `value = "42"
+try:
+    result = int(value)
+    print(f"Converted: {result}")
+except ValueError:
+    print("Conversion failed")`,
+      outputHint: 'Expect a converted value or a graceful fallback message.',
+      explainMore: `${difficultyPrompt[difficulty]} try handles risky code and except keeps the app responsive when errors occur.`,
+      hints: [
+        'Start with try: before conversion.',
+        'Catch ValueError with except.',
+        'Print a friendly message in both success and fallback paths.',
+      ],
+      validationKeywords: ['try:', 'except'],
+    }
+  }
+
+  if (lessonLower.includes('class') || lessonLower.includes('inheritance') || lessonLower.includes('method')) {
+    return {
+      concept: `${lessonTitle} in ${moduleTitle} demonstrates how classes bundle data and behavior together.`,
+      exampleCode: `class Buddy:
+    def __init__(self, name):
+        self.name = name
+
+    def cheer(self):
+        print(f"{self.name} says keep coding!")`,
+      starterCode: `class Buddy:
+    # TODO: add __init__ and cheer
+    pass`,
+      solutionCode: `class Buddy:
+    def __init__(self, name):
+        self.name = name
+
+    def cheer(self):
+        print(f"{self.name} says keep coding!")
+
+Buddy("PyPython").cheer()`,
+      outputHint: 'Expect a class method call that prints a message.',
+      explainMore: `${difficultyPrompt[difficulty]} Keep instance data in __init__ and expose behavior through clear methods.`,
+      hints: [
+        'Define __init__(self, ...).',
+        'Store a value on self.',
+        'Call a method on an instance and print from it.',
+      ],
+      validationKeywords: ['class ', 'def '],
+    }
+  }
+
+  if (lessonLower.includes('import') || lessonLower.includes('module') || lessonLower.includes('library') || lessonLower.includes('math') || lessonLower.includes('random') || lessonLower.includes('statistics') || lessonLower.includes('logging')) {
+    return {
+      concept: `${lessonTitle} in ${moduleTitle} shows how imports unlock reusable tools from Python's standard library.`,
+      exampleCode: `import math
+values = [9, 16, 25]
+roots = [math.sqrt(number) for number in values]
+print(roots)`,
+      starterCode: `import math
+values = [9, 16, 25]
+# TODO: compute square roots and print them`,
+      solutionCode: `import math
+values = [9, 16, 25]
+roots = [math.sqrt(number) for number in values]
+print(roots)`,
+      outputHint: 'Expect output containing transformed values from an imported helper.',
+      explainMore: `${difficultyPrompt[difficulty]} Imports keep code modular while avoiding reimplementation of common utilities.`,
+      hints: [
+        'Call a function from the imported module.',
+        'Loop or use a comprehension over values.',
+        'Print the transformed result.',
+      ],
+      validationKeywords: ['import ', 'print'],
+    }
+  }
+
+  if (lessonLower.includes('list') || lessonLower.includes('tuple') || lessonLower.includes('set') || lessonLower.includes('dict') || lessonLower.includes('sequence') || lessonLower.includes('comprehension')) {
+    return {
+      concept: `${lessonTitle} in ${moduleTitle} focuses on structuring and transforming grouped data.`,
+      exampleCode: `words = ["python", "buddy", "lesson"]
+lengths = {word: len(word) for word in words}
+print(lengths)`,
+      starterCode: `words = ["python", "buddy", "lesson"]
+# TODO: build a collection transformation
+print(words)`,
+      solutionCode: `words = ["python", "buddy", "lesson"]
+lengths = {word: len(word) for word in words}
+print(lengths)`,
+      outputHint: 'Expect transformed collection output, not only the original list.',
+      explainMore: `${difficultyPrompt[difficulty]} Data structures become powerful when you transform values into a new shape.`,
+      hints: [
+        'Create a new collection from words.',
+        'Use len() to compute derived values.',
+        'Print the transformed collection.',
+      ],
+      validationKeywords: ['for ', 'print'],
+    }
+  }
+
+  return {
+    concept: `${lessonTitle} in ${moduleTitle} helps you practice the named tutorial skill with clear input and output flow.`,
+    exampleCode: `topic = "${lessonTitle}"
+chapter = "${moduleTitle}"
+steps = ["read", "practice", "share"]
+for step in steps:
+    print(f"{topic}: {step}")`,
+    starterCode: `topic = "${lessonTitle}"
+# TODO: create a loop that prints learning steps
+print(topic)`,
+    solutionCode: `topic = "${lessonTitle}"
+chapter = "${moduleTitle}"
+steps = ["read", "practice", "share"]
+for step in steps:
+    print(f"{chapter} -> {topic}: {step}")`,
+    outputHint: 'Expect multiple readable lines tied to the lesson topic.',
+    explainMore: `${difficultyPrompt[difficulty]} Use variables for clarity and a loop for repeated output.`,
+    hints: [
+      `Start by storing "${lessonTitle}" in a variable.`,
+      'Add a list of short steps and iterate through it.',
+      'Print a formatted line inside the loop.',
+    ],
+    validationKeywords: ['for ', 'print'],
+  }
+}
+
+const buildLesson = (moduleTitle: string, lessonTitle: string, moduleId: string, index: number, difficulty: Difficulty): Lesson => {
   const slug = `${moduleId}-${index + 1}`
-  const concept = `${lessonTitle} in ${moduleTitle} helps you practice the core idea, see the syntax in context, and connect it back to the official Python tutorial.`
-  const exampleCode = `topic = "${lessonTitle}"
-chapter = "${moduleTitle}"
-print(f"Learning {topic} from {chapter}")
-for step in range(1, 3):
-    print(f"Step {step}: practice the key pattern")`
-  const starterCode = `topic = "${lessonTitle}"
-# TODO: create a tiny example connected to this lesson
-print(topic)`
-  const solutionCode = `topic = "${lessonTitle}"
-chapter = "${moduleTitle}"
-notes = ["read", "practice", "reflect"]
-for note in notes:
-    print(f"{chapter}: {topic} -> {note}")`
+  const template = buildLessonTemplate(moduleTitle, lessonTitle, difficulty)
 
   return {
     id: slug,
     title: lessonTitle,
     summary: `${lessonTitle} gives you a focused checkpoint inside ${moduleTitle}.`,
-    concept,
+    concept: template.concept,
     difficulty,
     estimatedMinutes: 12 + (index % 4) * 4,
-    exampleCode,
-    starterCode,
-    solutionCode,
-    outputHint: 'Expect readable lines that show the lesson topic and a short practice flow.',
-    explainMore: `${lessonTitle} becomes easier when you compare the example, starter, and solution code. Notice how the values are named clearly, how the loop or print structure supports the idea, and how small changes reshape the output.`,
-    hints: [
-      `Think about the main Python structure used in ${lessonTitle}.`,
-      `Try adding a variable plus a print or loop that mirrors the example.`,
-      `Reuse the chapter/topic pattern and generate at least one visible output line.`,
-    ],
-    validationKeywords: ['print', 'topic'],
+    exampleCode: template.exampleCode,
+    starterCode: template.starterCode,
+    solutionCode: template.solutionCode,
+    outputHint: template.outputHint,
+    explainMore: template.explainMore,
+    hints: template.hints,
+    validationKeywords: template.validationKeywords,
   }
 }
 
-export const curriculum: Module[] = moduleBlueprints.map((moduleBlueprint) => ({
-  id: moduleBlueprint.id,
-  chapter: moduleBlueprint.chapter,
-  title: moduleBlueprint.title,
-  icon: moduleBlueprint.icon,
-  description: moduleBlueprint.description,
-  difficulty: difficultyCycle[(moduleBlueprint.chapter - 1) % difficultyCycle.length],
-  estimatedMinutes: 60,
-  learningObjectives: [...moduleBlueprint.objectives],
-  lessons: moduleBlueprint.lessons.map((lessonTitle, index) => buildLesson(moduleBlueprint.title, lessonTitle, moduleBlueprint.id, index)),
-}))
+export const buildCurriculum = (preferredDifficulty: Difficulty = 'Beginner'): Module[] => (
+  moduleBlueprints.map((moduleBlueprint) => ({
+    id: moduleBlueprint.id,
+    chapter: moduleBlueprint.chapter,
+    title: moduleBlueprint.title,
+    icon: moduleBlueprint.icon,
+    description: moduleBlueprint.description,
+    difficulty: preferredDifficulty,
+    estimatedMinutes: 60,
+    learningObjectives: [...moduleBlueprint.objectives],
+    lessons: moduleBlueprint.lessons.map((lessonTitle, index) => buildLesson(moduleBlueprint.title, lessonTitle, moduleBlueprint.id, index, preferredDifficulty)),
+  }))
+)
+
+export const curriculum: Module[] = buildCurriculum()
 
 export const moduleMap = new Map(curriculum.map((moduleItem) => [moduleItem.id, moduleItem]))
 export const lessonMap = new Map(curriculum.flatMap((moduleItem) => moduleItem.lessons.map((lesson) => [lesson.id, { module: moduleItem, lesson }])))

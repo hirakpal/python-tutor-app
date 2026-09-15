@@ -55,7 +55,7 @@ export function LessonView({
     onVisit()
     const interval = window.setInterval(() => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000)
     return () => window.clearInterval(interval)
-  }, [onVisit, startedAt])
+  }, [lesson.id, moduleItem.id, onVisit, startedAt])
 
   const handleHint = () => {
     const nextLevel = Math.min(3, hintLevel + 1)

@@ -42,12 +42,13 @@ function App() {
               path="/"
               element={<Home modules={modules} progress={progress} preferredDifficulty={profile.preferredDifficulty} updateDifficulty={actions.updateDifficulty} buddyMood={buddy.mood} buddyMessage={buddy.message} />}
             />
-            <Route path="/module/:moduleId" element={<ModuleDetail progress={progress} preferredDifficulty={profile.preferredDifficulty} />} />
+            <Route path="/module/:moduleId" element={<ModuleDetail modules={modules} progress={progress} preferredDifficulty={profile.preferredDifficulty} />} />
             <Route
               path="/lesson/:moduleId/:lessonId"
               element={
                 <Lesson
                   progress={progress}
+                  modules={modules}
                   preferredDifficulty={profile.preferredDifficulty}
                   visitLesson={actions.visitLesson}
                   recordHint={actions.recordHint}
