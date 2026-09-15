@@ -1,43 +1,19 @@
 # Python Tutor App
 
-A Streamlit-based Python tutor application that teaches core Python topics from **Beginner** to **God** level with matching code examples, explanations, progress tracking, and RAG-powered custom lesson generation from official Python docs.
+A Streamlit-based Python learning app with chapter cards, routed lesson flows, progress persistence, analytics, and RAG-powered custom lesson generation based on the official Python tutorial.
 
 ## Features
 
-- Streamlit dashboard with difficulty toggle (Beginner, Average, Expert, God)
-- Starter lessons with progress tracking and JSON export
-- **RAG custom lesson generator** backed by Python tutorial docs: https://docs.python.org/3/tutorial/index.html
-- Retrieval coverage for Python tutorial chapters 1-9 (interpreter, basics, control flow, data structures, modules, I/O, exceptions, classes, stdlib)
-- Similarity search across documentation chunks
-- Related topic suggestions and quiz prompts for generated lessons
-- Generated lesson/topic progress persistence in `data/user_progress.json`
+- 11 module cards covering the Python tutorial chapters requested in the issue
+- Difficulty toggle for **Beginner**, **Average**, **Expert**, and **God**
+- Home dashboard with progress, filters, sorting, and continue-learning shortcuts
+- Module detail pages with ordered lesson lists and progress bars
+- Lesson view with code examples, explanations, docs links, quiz prompts, and next/previous navigation
+- JSON-backed profile persistence with backup, restore, reset, and export flows
+- Analytics page with progress charts, streaks, learning time, and achievement badges
+- RAG custom lesson generation backed by the official Python tutorial docs
 
-## Project Structure
-
-```text
-python-tutor-app/
-├── app.py
-├── document_loader.py
-├── embeddings.py
-├── rag_system.py
-├── lessons_rag.py
-├── data/
-│   ├── user_progress.json
-│   ├── python_docs/
-│   │   └── tutorial_cache.json
-│   └── embeddings/
-├── lessons/
-│   ├── __init__.py
-│   └── content.py
-├── utils/
-│   ├── __init__.py
-│   └── progress.py
-├── requirements.txt
-├── RAG_README.md
-└── README.md
-```
-
-## Run Locally
+## Run locally
 
 ```bash
 python -m venv .venv
@@ -46,4 +22,10 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-See `RAG_README.md` for architecture and RAG workflow details.
+See `RAG_README.md` for the retrieval architecture and RAG workflow details.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
