@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from urllib.parse import urlparse
 
 from document_loader import PythonTutorialLoader
 from lessons_rag import RAGLessonGenerator
@@ -20,7 +21,9 @@ class TestRAGSystem(unittest.TestCase):
 
         self.assertEqual(lesson.difficulty, "Beginner")
         self.assertTrue(lesson.sources)
-        self.assertTrue(any("docs.python.org" in source["url"] for source in lesson.sources))
+        self.assertTrue(
+            any(urlparse(source["url"]).netloc == "docs.python.org" for source in lesson.sources)
+        )
         self.assertTrue(lesson.code_examples)
         self.assertEqual(len(lesson.quiz), 3)
 
